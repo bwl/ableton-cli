@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Audio captures
+/captures/
+*.wav
+*.mp3
+*.flac
+
+# Analysis output
+*.analysis.json
+
+# Models
+models/*.pb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
