@@ -12,5 +12,12 @@ dependencies = [
     "matplotlib>=3.8.0",
 ]
 
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]
+render = ["pedalboard>=0.9", "soundfile>=0.12"]
+
 [project.scripts]
 ableton-cli = "lib.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["lib*"]

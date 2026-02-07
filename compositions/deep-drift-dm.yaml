@@ -1,0 +1,501 @@
+meta:
+  name: "Deep Drift"
+  key: Dm
+  bpm: 90
+  time_sig: [4, 4]
+
+patterns:
+  # ── Pad patterns ──────────────────────────────────────
+  dm-wash:
+    length: 32
+    notes:
+      # Dm chord: D3, F3, A3, D4 — glacial sustain
+      - "50:0:32:60"
+      - "53:0:32:55"
+      - "57:0:32:65"
+      - "62:0:32:50"
+
+  bb-wash:
+    length: 32
+    notes:
+      # Bbmaj7: Bb3, D4, F4, A4
+      - "58:0:32:58"
+      - "62:0:32:55"
+      - "65:0:32:60"
+      - "69:0:32:50"
+
+  gm7-wash:
+    length: 32
+    notes:
+      # Gm7: G3, Bb3, D4, F4
+      - "55:0:32:58"
+      - "58:0:32:55"
+      - "62:0:32:60"
+      - "65:0:32:50"
+
+  a7sus4-wash:
+    length: 32
+    notes:
+      # A7sus4: A3, D4, E4, G4
+      - "57:0:32:62"
+      - "62:0:32:55"
+      - "64:0:32:58"
+      - "67:0:32:50"
+
+  # ── Bass patterns ─────────────────────────────────────
+  d-drone:
+    length: 32
+    notes:
+      - "38:0:16:55"
+      - "50:16:4:40"
+      - "38:20:12:50"
+
+  bb-bass:
+    length: 32
+    notes:
+      - "46:0:16:52"
+      - "58:16:4:38"
+      - "46:20:12:48"
+
+  gm-walk:
+    length: 32
+    notes:
+      - "43:0:8:52"
+      - "55:8:4:42"
+      - "43:12:4:48"
+      - "45:16:8:50"
+      - "43:24:8:45"
+
+  a-tension:
+    length: 32
+    notes:
+      - "45:0:12:55"
+      - "57:12:4:42"
+      - "45:16:8:50"
+      - "40:24:8:48"
+
+  d-fade:
+    length: 32
+    notes:
+      - "38:0:24:45"
+      - "50:24:8:30"
+
+  # ── Keys patterns ─────────────────────────────────────
+  bb-keys:
+    length: 32
+    notes:
+      # Sparse Bbmaj7 voicing
+      - "70:0:8:50"
+      - "65:12:4:42"
+      - "69:20:6:45"
+
+  gm-keys:
+    length: 32
+    notes:
+      # Sparse Gm7
+      - "67:0:4:48"
+      - "70:8:8:42"
+      - "65:20:6:45"
+      - "62:28:4:40"
+
+  a-keys:
+    length: 32
+    notes:
+      # Arpeggiated A voicing — more movement at the peak
+      - "69:0:2:52"
+      - "64:2:2:48"
+      - "69:4:2:55"
+      - "72:6:2:50"
+      - "64:8:2:52"
+      - "69:10:2:48"
+      - "72:12:2:55"
+      - "76:14:2:50"
+      - "69:16:2:52"
+      - "64:18:2:48"
+      - "69:20:2:55"
+      - "72:22:2:50"
+      - "64:24:2:48"
+      - "69:26:2:52"
+      - "72:28:2:48"
+      - "76:30:2:45"
+
+  resurface-keys:
+    length: 32
+    notes:
+      - "70:0:6:48"
+      - "65:10:4:42"
+      - "69:18:8:45"
+      - "62:28:4:40"
+
+  dissolve-piano:
+    length: 32
+    notes:
+      # Single D5 note ringing out
+      - "74:0:24:42"
+
+  # ── Lead patterns ─────────────────────────────────────
+  drift-lead:
+    length: 32
+    notes:
+      # 2-3 note phrase, mostly space
+      - "70:8:4:50"
+      - "69:14:2:45"
+      - "65:18:6:48"
+
+  depth-lead:
+    length: 32
+    notes:
+      # Peak melody — more notes, higher energy
+      - "69:0:2:60"
+      - "72:2:3:55"
+      - "74:6:2:58"
+      - "72:10:4:52"
+      - "69:16:2:55"
+      - "74:18:4:60"
+      - "76:24:4:58"
+      - "74:28:4:52"
+
+  resurface-lead:
+    length: 32
+    notes:
+      # Descending melody — unwinding
+      - "74:4:3:52"
+      - "72:8:2:48"
+      - "69:12:4:50"
+      - "65:20:6:45"
+
+  # ── Guitar patterns ───────────────────────────────────
+  surface-harmonics:
+    length: 32
+    notes:
+      # Delicate harmonics — D string partials
+      - "74:4:3:35"
+      - "81:12:2:30"
+      - "74:20:4:32"
+      - "86:28:3:28"
+
+  gm-arp:
+    length: 32
+    notes:
+      # Arpeggiated Gm — gentle plucking
+      - "55:0:2:42"
+      - "58:2:2:38"
+      - "62:4:2:42"
+      - "67:6:2:38"
+      - "62:8:2:40"
+      - "58:10:2:36"
+      - "55:12:2:42"
+      - "62:14:2:38"
+      - "55:16:2:42"
+      - "58:18:2:38"
+      - "62:20:2:42"
+      - "67:22:2:38"
+      - "62:24:2:40"
+      - "58:26:2:36"
+      - "55:28:2:42"
+      - "62:30:2:38"
+
+  depth-shimmer:
+    length: 32
+    notes:
+      - "81:0:4:35"
+      - "74:8:3:32"
+      - "86:16:4:30"
+      - "81:24:3:28"
+      - "74:28:4:32"
+
+  resurface-guitar:
+    length: 32
+    notes:
+      - "55:0:2:40"
+      - "62:4:3:36"
+      - "58:10:2:38"
+      - "55:16:2:40"
+      - "62:20:3:36"
+      - "67:26:4:34"
+
+  dissolve-shimmer:
+    length: 32
+    notes:
+      - "86:8:8:22"
+
+  # ── Drum patterns ─────────────────────────────────────
+  current-drums:
+    length: 32
+    notes:
+      # Soft kicks on 1 of each bar, ghost hats
+      - "36:0:1:50"
+      - "42:4:0.5:25"
+      - "42:6:0.5:22"
+      - "36:8:1:48"
+      - "42:12:0.5:25"
+      - "42:14:0.5:22"
+      - "36:16:1:50"
+      - "42:20:0.5:25"
+      - "42:22:0.5:22"
+      - "36:24:1:48"
+      - "42:28:0.5:25"
+      - "42:30:0.5:22"
+
+  depth-drums:
+    length: 32
+    notes:
+      # Fuller pattern — kicks + ghost hats + rim
+      - "36:0:1:55"
+      - "42:2:0.5:28"
+      - "36:4:1:42"
+      - "42:6:0.5:25"
+      - "36:8:1:55"
+      - "37:10:0.5:30"
+      - "42:12:0.5:28"
+      - "42:14:0.5:25"
+      - "36:16:1:55"
+      - "42:18:0.5:28"
+      - "36:20:1:42"
+      - "42:22:0.5:25"
+      - "36:24:1:55"
+      - "37:26:0.5:30"
+      - "42:28:0.5:28"
+      - "42:30:0.5:25"
+
+  resurface-drums:
+    length: 32
+    notes:
+      # Gentle return — softer kicks, sparse
+      - "36:0:1:42"
+      - "42:8:0.5:22"
+      - "36:16:1:40"
+      - "42:24:0.5:22"
+
+  # ── Perc patterns ─────────────────────────────────────
+  surface-clicks:
+    length: 32
+    notes:
+      # Subtle clicks and textures — very low velocity
+      - "75:6:0.5:28"
+      - "75:14:0.5:25"
+      - "70:22:0.5:30"
+      - "75:30:0.5:22"
+
+  current-perc:
+    length: 32
+    notes:
+      - "70:0:0.5:32"
+      - "75:4:0.5:28"
+      - "70:8:0.5:30"
+      - "75:12:0.5:28"
+      - "70:16:0.5:32"
+      - "75:20:0.5:28"
+      - "70:24:0.5:30"
+      - "75:28:0.5:28"
+
+  depth-perc:
+    length: 32
+    notes:
+      - "70:0:0.5:35"
+      - "75:2:0.5:30"
+      - "70:4:0.5:32"
+      - "75:6:0.5:28"
+      - "70:8:0.5:35"
+      - "75:10:0.5:30"
+      - "70:12:0.5:32"
+      - "75:14:0.5:28"
+      - "70:16:0.5:35"
+      - "75:18:0.5:30"
+      - "70:20:0.5:32"
+      - "75:22:0.5:28"
+      - "70:24:0.5:35"
+      - "75:26:0.5:30"
+      - "70:28:0.5:32"
+      - "75:30:0.5:28"
+
+  undertow-perc:
+    length: 32
+    notes:
+      - "70:4:0.5:25"
+      - "75:16:0.5:22"
+      - "70:28:0.5:25"
+
+  resurface-perc:
+    length: 32
+    notes:
+      - "70:0:0.5:28"
+      - "75:8:0.5:25"
+      - "70:16:0.5:28"
+      - "75:24:0.5:25"
+
+  # ── Vox/FX patterns ───────────────────────────────────
+  depth-vox:
+    length: 32
+    notes:
+      # Breath/whisper textures
+      - "60:0:8:35"
+      - "64:16:8:30"
+
+  undertow-vox:
+    length: 32
+    notes:
+      - "60:8:12:28"
+      - "67:24:8:25"
+
+tracks:
+  - name: Drums
+    instrument: "(Ableton) Upright Bass drum rack"
+    volume: 0.45
+    pan: 0.0
+    clips:
+      current-drums: { slot: 3 }
+      depth-drums: { slot: 4 }
+      resurface-drums: { slot: 6 }
+
+  - name: Bass
+    instrument: "(Ableton) 2-Way Boom"
+    volume: 0.65
+    pan: 0.0
+    clips:
+      d-drone: { slot: 0 }
+      bb-bass: { slot: 2 }
+      gm-walk: { slot: 3 }
+      a-tension: { slot: 4 }
+      d-fade: { slot: 7 }
+
+  - name: Keys
+    instrument: "(Ableton) Grand Piano"
+    volume: 0.40
+    pan: -0.15
+    clips:
+      bb-keys: { slot: 2 }
+      gm-keys: { slot: 3 }
+      a-keys: { slot: 4 }
+      resurface-keys: { slot: 6 }
+      dissolve-piano: { slot: 7 }
+
+  - name: Synth Lead
+    instrument: "(Ableton) Creeper Lead"
+    volume: 0.35
+    pan: 0.20
+    clips:
+      drift-lead: { slot: 2 }
+      depth-lead: { slot: 4 }
+      resurface-lead: { slot: 6 }
+
+  - name: Synth Pad
+    instrument: "(Ableton) Exoplanet Rain"
+    volume: 0.55
+    pan: 0.0
+    clips:
+      dm-wash: { slot: 0 }
+      bb-wash: { slot: 2 }
+      gm7-wash: { slot: 3 }
+      a7sus4-wash: { slot: 4 }
+
+  - name: Guitar
+    instrument: "(Ableton) MPE Dulcimatica"
+    volume: 0.50
+    pan: -0.30
+    clips:
+      surface-harmonics: { slot: 1 }
+      gm-arp: { slot: 3 }
+      depth-shimmer: { slot: 4 }
+      resurface-guitar: { slot: 6 }
+      dissolve-shimmer: { slot: 7 }
+
+  - name: Perc
+    instrument: "(Ableton) Percussion Core Kit"
+    volume: 0.30
+    pan: 0.25
+    clips:
+      surface-clicks: { slot: 1 }
+      current-perc: { slot: 3 }
+      depth-perc: { slot: 4 }
+      undertow-perc: { slot: 5 }
+      resurface-perc: { slot: 6 }
+
+  - name: Vox / FX
+    instrument: "(Ableton) Mega Vox Kit"
+    volume: 0.35
+    pan: 0.10
+    clips:
+      depth-vox: { slot: 4 }
+      undertow-vox: { slot: 5 }
+
+scenes:
+  - name: Void
+    bars: 8
+    clips:
+      Synth Pad: dm-wash
+
+  - name: Surface
+    bars: 8
+    clips:
+      Synth Pad: dm-wash
+      Bass: d-drone
+      Guitar: surface-harmonics
+      Perc: surface-clicks
+
+  - name: Drift
+    bars: 8
+    clips:
+      Synth Pad: bb-wash
+      Bass: bb-bass
+      Keys: bb-keys
+      Synth Lead: drift-lead
+
+  - name: Current
+    bars: 8
+    clips:
+      Synth Pad: gm7-wash
+      Bass: gm-walk
+      Keys: gm-keys
+      Drums: current-drums
+      Guitar: gm-arp
+      Perc: current-perc
+
+  - name: Depth
+    bars: 8
+    clips:
+      Synth Pad: a7sus4-wash
+      Bass: a-tension
+      Keys: a-keys
+      Synth Lead: depth-lead
+      Drums: depth-drums
+      Guitar: depth-shimmer
+      Perc: depth-perc
+      Vox / FX: depth-vox
+
+  - name: Undertow
+    bars: 8
+    clips:
+      Synth Pad: dm-wash
+      Bass: d-drone
+      Perc: undertow-perc
+      Vox / FX: undertow-vox
+
+  - name: Resurface
+    bars: 8
+    clips:
+      Synth Pad: bb-wash
+      Bass: bb-bass
+      Keys: resurface-keys
+      Synth Lead: resurface-lead
+      Drums: resurface-drums
+      Guitar: resurface-guitar
+      Perc: resurface-perc
+
+  - name: Dissolve
+    bars: 8
+    clips:
+      Synth Pad: dm-wash
+      Bass: d-fade
+      Keys: dissolve-piano
+      Guitar: dissolve-shimmer
+
+arrangement:
+  - Void
+  - Surface
+  - Drift
+  - Current
+  - Depth
+  - Undertow
+  - Resurface
+  - Dissolve

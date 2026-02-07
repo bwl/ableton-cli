@@ -168,21 +168,19 @@ def cmd_set_clip_name(args):
 
 def cmd_add_notes(args):
     """Add MIDI notes: add-notes <track> <slot> <pitch:start:dur:vel> ..."""
+    from .song import parse_note
     track = _require_arg(args, 0, "add-notes <track> <slot> <pitch:start:dur:vel> ...")
     slot = _require_arg(args, 1, "add-notes <track> <slot> <pitch:start:dur:vel> ...")
     if len(args) < 3:
         _die("add-notes <track> <slot> <pitch:start:dur:vel> ...")
     notes = []
     for note_str in args[2:]:
-        parts = note_str.split(":")
-        if len(parts) < 3:
-            print(f"Error: note format is pitch:start:duration[:velocity] — got '{note_str}'", file=sys.stderr)
+        try:
+            n = parse_note(note_str)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
-        pitch = int(parts[0])
-        start = float(parts[1])
-        dur = float(parts[2])
-        vel = int(parts[3]) if len(parts) > 3 else 100
-        notes.append((pitch, start, dur, vel, 0))
+        notes.append((n.pitch, n.start, n.duration, n.velocity, 0))
     osc.add_notes(int(track), int(slot), notes)
 
 
@@ -458,6 +456,210 @@ def cmd_midi(args):
         sys.exit(1)
 
 
+# ── Song (YAML) ──────────────────────────────────────────
+
+def cmd_validate(args):
+    """Validate a YAML song file."""
+    from . import song
+    filepath = _require_arg(args, 0, "validate <song.yaml>")
+    if not Path(filepath).is_file():
+        print(f"Error: File not found: {filepath}", file=sys.stderr)
+        sys.exit(1)
+    try:
+        s = song.load(filepath)
+    except Exception as e:
+        print(f"Error parsing YAML: {e}", file=sys.stderr)
+        sys.exit(1)
+    errors = song.validate(s)
+    if errors:
+        print(f"Validation failed ({len(errors)} errors):")
+        for err in errors:
+            print(f"  - {err}")
+        sys.exit(1)
+    else:
+        print(f"OK: '{s.name}' — {s.key} @ {s.bpm} BPM")
+        print(f"  {len(s.tracks)} tracks, {len(s.scenes)} scenes, {sum(len(t.clips) for t in s.tracks)} clips")
+
+
+def cmd_push(args):
+    """Push a YAML song to Ableton via OSC — creates tracks, clips, notes."""
+    import time
+    from . import song
+
+    filepath = _require_arg(args, 0, "push <song.yaml> [--clear]")
+    clear = "--clear" in args
+
+    if not Path(filepath).is_file():
+        print(f"Error: File not found: {filepath}", file=sys.stderr)
+        sys.exit(1)
+
+    s = song.load(filepath)
+    errors = song.validate(s)
+    if errors:
+        print(f"Validation failed:")
+        for err in errors:
+            print(f"  - {err}")
+        sys.exit(1)
+
+    MSG_DELAY = 0.05
+
+    print(f"Pushing '{s.name}' ({s.key} @ {s.bpm} BPM) to Ableton...")
+
+    # Set tempo
+    osc.set_tempo(s.bpm)
+    time.sleep(MSG_DELAY)
+
+    if clear:
+        print("  Clearing existing tracks...")
+        for i in range(15, -1, -1):
+            try:
+                osc.delete_track(i)
+                time.sleep(MSG_DELAY)
+            except Exception:
+                pass
+        time.sleep(0.5)
+
+    # Create tracks
+    print(f"  Creating {len(s.tracks)} tracks...")
+    for track in s.tracks:
+        osc.create_midi_track(-1)
+        time.sleep(0.1)
+    time.sleep(0.5)
+
+    # Name tracks and set mixer
+    for i, track in enumerate(s.tracks):
+        osc.set_track_name(i, track.name)
+        time.sleep(MSG_DELAY)
+        osc.set_volume(i, track.volume)
+        time.sleep(MSG_DELAY)
+        if track.pan != 0.0:
+            osc.set_pan(i, track.pan)
+            time.sleep(MSG_DELAY)
+
+    # Write clips
+    total_clips = 0
+    for i, track in enumerate(s.tracks):
+        if not track.clips:
+            continue
+        for cname, clip in track.clips.items():
+            slot = song.get_clip_slot(clip)
+            # Create clip
+            osc.create_clip(i, slot, clip.length)
+            time.sleep(0.1)
+            # Add notes
+            if clip.notes:
+                note_tuples = [(n.pitch, n.start, n.duration, n.velocity, 0) for n in clip.notes]
+                osc.add_notes(i, slot, note_tuples)
+                time.sleep(MSG_DELAY)
+            # Name clip
+            osc.set_clip_name(i, slot, cname)
+            time.sleep(MSG_DELAY)
+            total_clips += 1
+    print(f"  Wrote {total_clips} clips across {len(s.tracks)} tracks")
+
+    # Name scenes
+    for i, scene in enumerate(s.scenes):
+        osc.set_scene_name(i, scene.name)
+        time.sleep(MSG_DELAY)
+
+    print(f"  Named {len(s.scenes)} scenes")
+    print(f"\nDone! Add instruments in Ableton, then 'fire-scene 0' to begin.")
+    for i, track in enumerate(s.tracks):
+        print(f"  Track {i}: {track.name:14s} → {track.instrument}")
+
+
+def cmd_render(args):
+    """Render a YAML song to WAV (offline, requires pedalboard)."""
+    from . import render
+    if not render.HAS_PEDALBOARD:
+        print("Error: render requires pedalboard. Install: uv pip install -e '.[render]'", file=sys.stderr)
+        sys.exit(1)
+
+    from . import song
+
+    # Parse flags
+    filepath = None
+    scene_idx = None
+    output = None
+    do_analyze = False
+    full = False
+    remaining = []
+
+    i = 0
+    while i < len(args):
+        if args[i] == "--scene" and i + 1 < len(args):
+            scene_idx = int(args[i + 1])
+            i += 2
+        elif args[i] == "--output" and i + 1 < len(args):
+            output = args[i + 1]
+            i += 2
+        elif args[i] == "--analyze":
+            do_analyze = True
+            i += 1
+        elif args[i] == "--full":
+            full = True
+            i += 1
+        else:
+            remaining.append(args[i])
+            i += 1
+
+    if not remaining:
+        _die("render <song.yaml> [--scene N] [--full] [--output path] [--analyze]")
+    filepath = remaining[0]
+
+    if not Path(filepath).is_file():
+        print(f"Error: File not found: {filepath}", file=sys.stderr)
+        sys.exit(1)
+
+    s = song.load(filepath)
+    errors = song.validate(s)
+    if errors:
+        print(f"Validation failed:")
+        for err in errors:
+            print(f"  - {err}")
+        sys.exit(1)
+
+    sr = 44100
+
+    if scene_idx is not None:
+        if scene_idx >= len(s.scenes):
+            print(f"Error: scene {scene_idx} out of range (0-{len(s.scenes)-1})", file=sys.stderr)
+            sys.exit(1)
+        print(f"Rendering scene {scene_idx} ({s.scenes[scene_idx].name})...")
+        audio = render.render_scene(s, scene_idx, sr=sr)
+        default_name = f"{Path(filepath).stem}_scene{scene_idx}.wav"
+    elif full:
+        print(f"Rendering full arrangement ({len(s.arrangement)} scenes)...")
+        audio = render.render_arrangement(s, sr=sr)
+        default_name = f"{Path(filepath).stem}_full.wav"
+    else:
+        # Default: render first scene
+        print(f"Rendering scene 0 ({s.scenes[0].name})...")
+        audio = render.render_scene(s, 0, sr=sr)
+        default_name = f"{Path(filepath).stem}_scene0.wav"
+
+    out_path = output or str(Path("captures") / default_name)
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    render.render_to_file(audio, out_path, sr=sr)
+    print(f"Rendered to {out_path}")
+
+    if do_analyze:
+        from . import analyze
+        result = analyze.full_analysis(out_path, spectrograms=True, extended=True)
+        print(json.dumps(result, indent=2))
+
+
+def cmd_export(args):
+    """Export current Ableton session to YAML."""
+    from . import export_session
+    output = args[0] if args else "exported_session.yaml"
+    include_notes = "--no-notes" not in args
+    s = export_session.export_session(include_notes=include_notes)
+    from . import song
+    song.save(s, output)
+    print(f"Exported to {output}")
+
+
 # ── Helpers ───────────────────────────────────────────────
 
 def _require_arg(args, index, usage_hint):
@@ -529,6 +731,11 @@ COMMANDS = {
     "monitor": cmd_monitor,
     # MIDI
     "midi": cmd_midi,
+    # Song (YAML)
+    "validate": cmd_validate,
+    "push": cmd_push,
+    "render": cmd_render,
+    "export": cmd_export,
 }
 
 USAGE = """\
@@ -610,6 +817,16 @@ MIDI:
   midi chord <root> [type]  Send chord (major, minor, 7th, maj7, min7, dim, aug, sus2, sus4)
   midi cc <num> <val>       Send CC message
   midi pattern <name|list>  Play/list MIDI patterns
+
+SONG (YAML):
+  validate <song.yaml>      Validate a YAML song file
+  push <song.yaml> [--clear] Push song to Ableton (create tracks, clips, notes)
+  render <song.yaml> [opts] Render song to WAV (offline, needs pedalboard)
+    --scene N               Render specific scene
+    --full                  Render full arrangement
+    --output <path>         Output file path
+    --analyze               Auto-analyze rendered audio
+  export [output.yaml]      Export current Ableton session to YAML
 
 ENVIRONMENT:
   CARABINER_HOST  Carabiner host    (default: localhost)
