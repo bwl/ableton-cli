@@ -98,7 +98,11 @@ def stop_clip(track: int, clip: int):
 
 
 def fire_scene(scene: int):
-    _client().send_message("/live/song/fire_scene", [int(scene)])
+    _client().send_message("/live/scene/fire", [int(scene)])
+
+
+def set_scene_name(scene: int, name: str):
+    _client().send_message("/live/scene/set/name", [int(scene), name])
 
 
 # ── Track Mixer ────────────────────────────────────────────

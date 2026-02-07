@@ -11,6 +11,7 @@ No GPL dependencies are linked — all vendorable libs are MIT/ISC/BSD/Unlicense
 """
 
 import json
+import signal
 import sys
 from pathlib import Path
 
@@ -64,6 +65,12 @@ def cmd_stop_clip(args):
 def cmd_fire_scene(args):
     scene = _require_arg(args, 0, "fire-scene <scene>")
     osc.fire_scene(int(scene))
+
+
+def cmd_set_scene_name(args):
+    scene = _require_arg(args, 0, "set-scene-name <scene> <name>")
+    name = _require_arg(args, 1, "set-scene-name <scene> <name>")
+    osc.set_scene_name(int(scene), name)
 
 
 def cmd_mute(args):
@@ -245,29 +252,76 @@ def cmd_capture_bars(args):
 
 # ── Analysis ──────────────────────────────────────────────
 
+def _parse_analysis_flags(args):
+    """Parse -s/-t/-e flags from args, return (flags_dict, remaining_args)."""
+    flags = {"spectrograms": False, "time_series": False, "extended": False}
+    remaining = []
+    for a in args:
+        if a in ("-s", "--spectrogram", "--spectrograms"):
+            flags["spectrograms"] = True
+        elif a in ("-t", "--time-series"):
+            flags["time_series"] = True
+        elif a in ("-e", "--extended"):
+            flags["extended"] = True
+        else:
+            remaining.append(a)
+    return flags, remaining
+
+
 def cmd_analyze(args):
-    filepath = _require_arg(args, 0, "analyze <file.wav>")
+    flags, rest = _parse_analysis_flags(args)
+    filepath = _require_arg(rest, 0, "analyze [-s] [-t] [-e] <file.wav>")
     if not Path(filepath).is_file():
         print(f"Error: File not found: {filepath}", file=sys.stderr)
         sys.exit(1)
     from . import analyze
-    result = {"file": filepath}
-    if analyze.HAS_LIBROSA:
-        result["librosa"] = analyze.analyze_with_librosa(filepath)
-    if analyze.HAS_ESSENTIA:
-        result["essentia"] = analyze.analyze_with_essentia(filepath)
-    if not analyze.HAS_LIBROSA and not analyze.HAS_ESSENTIA:
-        result["error"] = "No analysis library available. Install: pip install librosa"
+
+    if any(flags.values()):
+        result = analyze.full_analysis(filepath, **flags)
+    else:
+        result = {"file": filepath}
+        if analyze.HAS_LIBROSA:
+            result["librosa"] = analyze.analyze_with_librosa(filepath)
+        if analyze.HAS_ESSENTIA:
+            result["essentia"] = analyze.analyze_with_essentia(filepath)
+        if not analyze.HAS_LIBROSA and not analyze.HAS_ESSENTIA:
+            result["error"] = "No analysis library available. Install: pip install librosa"
     print(json.dumps(result, indent=2))
+
+
+def cmd_spectrogram(args):
+    """Generate spectrograms from an existing audio file."""
+    filepath = _require_arg(args, 0, "spectrogram <file.wav>")
+    if not Path(filepath).is_file():
+        print(f"Error: File not found: {filepath}", file=sys.stderr)
+        sys.exit(1)
+    from . import analyze
+    paths = analyze.generate_spectrograms(filepath)
+    print(json.dumps(paths, indent=2))
 
 
 # ── Listen (capture + analyze) ────────────────────────────
 
 def cmd_listen(args):
-    bars = int(args[0]) if args else 4
+    flags, rest = _parse_analysis_flags(args)
+    bars = float(rest[0]) if rest else 4
     path = capture.capture_bars(bars)
-    if path.is_file():
-        cmd_analyze([str(path)])
+    if not path.is_file():
+        return
+
+    from . import analyze
+
+    if any(flags.values()):
+        result = analyze.full_analysis(str(path), **flags)
+    else:
+        result = {"file": str(path)}
+        if analyze.HAS_LIBROSA:
+            result["librosa"] = analyze.analyze_with_librosa(str(path))
+        if analyze.HAS_ESSENTIA:
+            result["essentia"] = analyze.analyze_with_essentia(str(path))
+        if not analyze.HAS_LIBROSA and not analyze.HAS_ESSENTIA:
+            result["error"] = "No analysis library available."
+    print(json.dumps(result, indent=2))
 
 
 # ── Templates ─────────────────────────────────────────────
@@ -286,6 +340,70 @@ def cmd_template(args):
         print("Usage: ableton-cli template <band|list> [options]", file=sys.stderr)
         print("  band [bpm]    Create 8-track band template (default: 120 BPM)", file=sys.stderr)
         print("  list          List available templates", file=sys.stderr)
+        sys.exit(1)
+
+
+# ── Procedures ────────────────────────────────────────────
+
+def cmd_probe(args):
+    from . import procedures
+    track = int(_require_arg(args, 0, "probe <track> [bars]"))
+    bars = int(args[1]) if len(args) > 1 else 1
+    results = procedures.probe_track(track, bars=bars)
+    print(json.dumps(results, indent=2))
+
+
+def cmd_sweep(args):
+    from . import procedures
+    track = int(_require_arg(args, 0, "sweep <track> <device> <param> [start end steps] [bars]"))
+    device = int(_require_arg(args, 1, "sweep <track> <device> <param> [start end steps] [bars]"))
+    param = int(_require_arg(args, 2, "sweep <track> <device> <param> [start end steps] [bars]"))
+    start = float(args[3]) if len(args) > 3 else 0.0
+    end = float(args[4]) if len(args) > 4 else 1.0
+    steps = int(args[5]) if len(args) > 5 else 5
+    bars = int(args[6]) if len(args) > 6 else 1
+    results = procedures.sweep_parameter(track, device, param, start, end, steps, bars=bars)
+    print(json.dumps(results, indent=2))
+
+
+def cmd_mix_check(args):
+    from . import procedures
+    track_count = int(args[0]) if args else None
+    bars = int(args[1]) if len(args) > 1 else 2
+    results = procedures.mix_check(track_count=track_count, bars=bars)
+    print(json.dumps(results, indent=2))
+
+
+# ── Monitor ───────────────────────────────────────────────
+
+def cmd_monitor(args):
+    from . import monitor
+    subcmd = args[0] if args else ""
+
+    if subcmd == "start":
+        bars = int(args[1]) if len(args) > 1 else 4
+        print(f"Starting monitor: capturing {bars} bars per cycle", flush=True)
+        print("Press Ctrl-C to stop.", flush=True)
+        monitor.start(interval_bars=bars)
+        try:
+            signal.pause()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            monitor.stop()
+            print("\nMonitor stopped.", flush=True)
+
+    elif subcmd == "latest":
+        result = monitor.latest()
+        if result is None:
+            print("No analysis available yet. Run 'monitor start' first.", file=sys.stderr)
+            sys.exit(1)
+        print(json.dumps(result, indent=2))
+
+    else:
+        print("Usage: ableton-cli monitor <start [bars]|latest>", file=sys.stderr)
+        print("  start [bars]   Start continuous capture+analyze loop (default: 4 bars)", file=sys.stderr)
+        print("  latest         Read latest analysis from captures/latest_analysis.json", file=sys.stderr)
         sys.exit(1)
 
 
@@ -374,6 +492,7 @@ COMMANDS = {
     "fire": cmd_fire,
     "stop-clip": cmd_stop_clip,
     "fire-scene": cmd_fire_scene,
+    "set-scene-name": cmd_set_scene_name,
     "create-clip": cmd_create_clip,
     "delete-clip": cmd_delete_clip,
     "set-clip-name": cmd_set_clip_name,
@@ -397,10 +516,17 @@ COMMANDS = {
     "capture-bars": cmd_capture_bars,
     # Analysis
     "analyze": cmd_analyze,
+    "spectrogram": cmd_spectrogram,
     # Combined
     "listen": cmd_listen,
     # Templates
     "template": cmd_template,
+    # Procedures
+    "probe": cmd_probe,
+    "sweep": cmd_sweep,
+    "mix-check": cmd_mix_check,
+    # Monitor
+    "monitor": cmd_monitor,
     # MIDI
     "midi": cmd_midi,
 }
@@ -455,10 +581,24 @@ CAPTURE:
   capture-bars [n]          Capture N bars (auto-calculates from BPM)
 
 ANALYSIS:
-  analyze <file.wav>        Analyze audio file → JSON
+  analyze [-s] [-t] [-e] <file.wav>   Analyze audio file → JSON
+  spectrogram <file.wav>    Generate mel + chroma PNGs from audio file
+    -s  --spectrogram       Generate mel + chroma spectrogram PNGs
+    -t  --time-series       Include per-beat energy/brightness/chroma arrays
+    -e  --extended          Include onsets, HPSS, spectral contrast, tonnetz, chords
 
 COMBINED:
-  listen [bars]             Capture + analyze (default: 4 bars)
+  listen [-s] [-t] [-e] [bars]   Capture + analyze (default: 4 bars)
+
+PROCEDURES:
+  probe <track> [bars]      Map sounds on a track (solo, play octaves, analyze)
+  sweep <t> <d> <p> [start end steps] [bars]
+                            Sweep device parameter and capture at each step
+  mix-check [tracks] [bars] Per-track solo/capture/analyze pass
+
+MONITOR:
+  monitor start [bars]      Start continuous capture+analyze loop (Ctrl-C to stop)
+  monitor latest            Read latest analysis from captures/latest_analysis.json
 
 TEMPLATES:
   template band [bpm]       Create 8-track band setup with starter patterns

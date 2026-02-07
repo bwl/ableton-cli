@@ -9,6 +9,7 @@ dependencies = [
     "python-rtmidi>=1.5.0",
     "librosa>=0.10.0",
     "numpy>=1.24.0",
+    "matplotlib>=3.8.0",
 ]
 
 [project.scripts]

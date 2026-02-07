@@ -53,7 +53,7 @@ def capture_seconds(duration: float) -> Path:
     return outfile
 
 
-def capture_bars(bars: int, bpm: float | None = None) -> Path:
+def capture_bars(bars: float, bpm: float | None = None) -> Path:
     """Capture N bars of audio. If bpm is None, queries Carabiner."""
     if bpm is None:
         from . import link
