@@ -251,8 +251,9 @@ def cmd_capture_bars(args):
 # ── Analysis ──────────────────────────────────────────────
 
 def _parse_analysis_flags(args):
-    """Parse -s/-t/-e flags from args, return (flags_dict, remaining_args)."""
-    flags = {"spectrograms": False, "time_series": False, "extended": False}
+    """Parse -s/-t/-e/-q flags from args, return (flags_dict, remaining_args)."""
+    flags = {"spectrograms": False, "time_series": False, "extended": False,
+             "qualitative": False}
     remaining = []
     for a in args:
         if a in ("-s", "--spectrogram", "--spectrograms"):
@@ -261,6 +262,8 @@ def _parse_analysis_flags(args):
             flags["time_series"] = True
         elif a in ("-e", "--extended"):
             flags["extended"] = True
+        elif a in ("-q", "--qualitative"):
+            flags["qualitative"] = True
         else:
             remaining.append(a)
     return flags, remaining
@@ -788,14 +791,16 @@ CAPTURE:
   capture-bars [n]          Capture N bars (auto-calculates from BPM)
 
 ANALYSIS:
-  analyze [-s] [-t] [-e] <file.wav>   Analyze audio file → JSON
+  analyze [-s] [-t] [-e] [-q] <file.wav>   Analyze audio file → JSON
   spectrogram <file.wav>    Generate mel + chroma PNGs from audio file
     -s  --spectrogram       Generate mel + chroma spectrogram PNGs
     -t  --time-series       Include per-beat energy/brightness/chroma arrays
     -e  --extended          Include onsets, HPSS, spectral contrast, tonnetz, chords
+    -q  --qualitative       Descriptive labels (implies -t -e): energy level,
+                            brightness, texture, rhythmic density, mood tendency, etc.
 
 COMBINED:
-  listen [-s] [-t] [-e] [bars]   Capture + analyze (default: 4 bars)
+  listen [-s] [-t] [-e] [-q] [bars]   Capture + analyze (default: 4 bars)
 
 PROCEDURES:
   probe <track> [bars]      Map sounds on a track (solo, play octaves, analyze)

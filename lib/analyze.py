@@ -255,10 +255,233 @@ def analyze_mir_extended(filepath: str, y=None, sr=None) -> dict:
     return result
 
 
-def full_analysis(filepath: str, time_series=False, spectrograms=False, extended=False) -> dict:
+def _classify(value, thresholds):
+    """Return label for *value* based on sorted (cutoff, label) thresholds.
+
+    *thresholds* is a list of ``(upper_bound, label)`` pairs in ascending order.
+    The last entry should use ``float('inf')`` as the upper bound.
+    """
+    for cutoff, label in thresholds:
+        if value < cutoff:
+            return label
+    return thresholds[-1][1]
+
+
+def analyze_qualitative(result: dict) -> dict:
+    """Derive descriptive, qualitative labels from raw numeric analysis.
+
+    Works with whatever data is present in *result* — richer input (``-e``,
+    ``-t``) produces richer qualitative output.  Every descriptor is
+    *characterising*, never evaluative: it says what the music sounds like,
+    not whether it is good.
+    """
+    q: dict = {}
+    lib = result.get("librosa", {})
+    ext = result.get("extended", {})
+    ts = result.get("time_series", {})
+
+    # ── Energy level ──────────────────────────────────────────
+    energy = lib.get("energy", {})
+    e_mean = energy.get("mean")
+    if e_mean is not None:
+        q["energy_level"] = _classify(e_mean, [
+            (0.005, "silent"),
+            (0.02, "very quiet"),
+            (0.05, "quiet"),
+            (0.10, "moderate"),
+            (0.20, "loud"),
+            (0.35, "very loud"),
+            (float("inf"), "intense"),
+        ])
+
+    # ── Dynamic range (coefficient of variation of RMS) ───────
+    e_std = energy.get("std")
+    if e_mean and e_std and e_mean > 0.005:
+        cv = e_std / e_mean
+        q["dynamic_range"] = _classify(cv, [
+            (0.15, "compressed"),
+            (0.35, "subtle dynamics"),
+            (0.65, "moderate dynamics"),
+            (1.0, "wide dynamics"),
+            (float("inf"), "extreme dynamics"),
+        ])
+
+    # ── Brightness / tonal colour ─────────────────────────────
+    brightness = lib.get("brightness", {})
+    centroid = brightness.get("centroid_mean")
+    if centroid is not None:
+        q["brightness"] = _classify(centroid, [
+            (800, "very dark"),
+            (1500, "dark"),
+            (2500, "warm"),
+            (4000, "balanced"),
+            (6000, "bright"),
+            (float("inf"), "harsh"),
+        ])
+
+    # ── Rhythmic density (requires -e) ────────────────────────
+    onsets = ext.get("onsets", {})
+    density = onsets.get("density_per_sec")
+    if density is not None:
+        q["rhythmic_density"] = _classify(density, [
+            (1, "very sparse"),
+            (2, "sparse"),
+            (4, "relaxed"),
+            (6, "moderate"),
+            (8, "busy"),
+            (float("inf"), "frantic"),
+        ])
+
+    # ── Texture: harmonic vs percussive (requires -e) ─────────
+    hpss = ext.get("hpss", {})
+    h_ratio = hpss.get("harmonic_ratio")
+    if h_ratio is not None:
+        q["texture"] = _classify(h_ratio, [
+            (0.2, "purely percussive"),
+            (0.35, "percussion-heavy"),
+            (0.45, "rhythm-dominant"),
+            (0.55, "balanced"),
+            (0.65, "melody-dominant"),
+            (0.80, "melodic"),
+            (float("inf"), "purely melodic"),
+        ])
+
+    # ── Harmonic complexity (requires -e chords) ──────────────
+    chords = ext.get("chords_per_beat", [])
+    if chords:
+        unique = set(c for c in chords if c != "N")
+        n_unique = len(unique)
+        if n_unique == 0:
+            q["harmonic_complexity"] = "no pitched content"
+        elif n_unique == 1:
+            q["harmonic_complexity"] = "static harmony"
+        elif n_unique == 2:
+            q["harmonic_complexity"] = "simple progression"
+        elif n_unique <= 4:
+            q["harmonic_complexity"] = "moderate progression"
+        else:
+            q["harmonic_complexity"] = "complex harmony"
+
+        # Major/minor lean
+        n_minor = sum(1 for c in unique if c.endswith("m"))
+        n_major = len(unique) - n_minor
+        if unique:
+            if n_minor > n_major:
+                q["harmonic_colour"] = "minor-leaning"
+            elif n_major > n_minor:
+                q["harmonic_colour"] = "major-leaning"
+            else:
+                q["harmonic_colour"] = "mixed"
+
+    # ── Stability / movement (requires -t) ────────────────────
+    epb = ts.get("energy_per_beat", [])
+    bpb = ts.get("brightness_per_beat", [])
+
+    if len(epb) >= 4:
+        arr = np.array(epb)
+        mean = np.mean(arr)
+        if mean > 0.005:
+            cv_energy = float(np.std(arr) / mean)
+            q["energy_stability"] = _classify(cv_energy, [
+                (0.15, "steady"),
+                (0.35, "gently shifting"),
+                (0.60, "dynamic"),
+                (1.0, "volatile"),
+                (float("inf"), "erratic"),
+            ])
+            # Trend detection — is energy rising or falling over the capture?
+            half = len(arr) // 2
+            first_half = float(np.mean(arr[:half]))
+            second_half = float(np.mean(arr[half:]))
+            if mean > 0.005:
+                change = (second_half - first_half) / mean
+                if change > 0.25:
+                    q["energy_trajectory"] = "building"
+                elif change < -0.25:
+                    q["energy_trajectory"] = "decaying"
+                else:
+                    q["energy_trajectory"] = "sustaining"
+
+    if len(bpb) >= 4:
+        arr = np.array(bpb)
+        mean_b = np.mean(arr)
+        if mean_b > 100:
+            cv_bright = float(np.std(arr) / mean_b)
+            q["timbral_movement"] = _classify(cv_bright, [
+                (0.10, "static timbre"),
+                (0.25, "subtle shifts"),
+                (0.50, "evolving"),
+                (float("inf"), "dramatically shifting"),
+            ])
+
+    # ── Spectral contrast → timbral texture (requires -e) ────
+    sc = ext.get("spectral_contrast", [])
+    if len(sc) >= 7:
+        mean_contrast = float(np.mean(sc))
+        q["spectral_character"] = _classify(mean_contrast, [
+            (15, "flat / washy"),
+            (25, "soft"),
+            (35, "defined"),
+            (45, "crisp"),
+            (float("inf"), "sharp / peaky"),
+        ])
+
+    # ── Mood tendency (composite) ─────────────────────────────
+    # Combines brightness, energy, and harmonic colour into a mood
+    # direction.  Framed as tendency, not assertion — these are
+    # statistical correlations, not felt experience.
+    if centroid is not None and e_mean is not None:
+        bright = centroid > 2500
+        dark = centroid < 1500
+        high_e = e_mean > 0.10
+        low_e = e_mean < 0.05
+        minor = q.get("harmonic_colour") == "minor-leaning"
+        major = q.get("harmonic_colour") == "major-leaning"
+
+        moods = []
+        if dark and low_e:
+            moods.append("somber")
+        if dark and high_e:
+            moods.append("intense")
+        if bright and high_e:
+            moods.append("energetic")
+        if bright and low_e:
+            moods.append("airy")
+        if minor and not high_e:
+            moods.append("melancholic")
+        if major and high_e:
+            moods.append("uplifting")
+        if minor and high_e:
+            moods.append("driving")
+        if not bright and not dark and not high_e and not low_e:
+            moods.append("neutral")
+
+        if moods:
+            q["mood_tendency"] = moods
+
+    # ── Summary line ──────────────────────────────────────────
+    # One-sentence characterisation built from available descriptors.
+    parts = []
+    for key in ("energy_level", "brightness", "texture",
+                "rhythmic_density", "harmonic_complexity"):
+        if key in q:
+            parts.append(q[key])
+    if parts:
+        q["summary"] = ", ".join(parts)
+
+    return q
+
+
+def full_analysis(filepath: str, time_series=False, spectrograms=False,
+                  extended=False, qualitative=False) -> dict:
     """Coordinator: loads audio once, runs requested analyses."""
     if not HAS_LIBROSA:
         return {"error": "librosa not available"}
+
+    # Qualitative analysis benefits from extended + time-series data.
+    if qualitative:
+        extended = True
+        time_series = True
 
     y, sr = librosa.load(filepath)
 
@@ -276,6 +499,9 @@ def full_analysis(filepath: str, time_series=False, spectrograms=False, extended
 
     if HAS_ESSENTIA:
         result["essentia"] = analyze_with_essentia(filepath)
+
+    if qualitative:
+        result["qualitative"] = analyze_qualitative(result)
 
     return result
 
