@@ -73,6 +73,20 @@ class AbletonQuery:
     def get_devices(self, track_idx):
         return self.query("/live/track/get/devices/name", track_idx)
 
+    def get_device_params(self, track_idx, device_idx=0):
+        """Get parameter names and values for a device."""
+        names = self.query("/live/device/get/parameters/name", track_idx, device_idx)
+        values = self.query("/live/device/get/parameters/value", track_idx, device_idx)
+        if names and values:
+            # First two elements are track_idx and device_idx
+            param_names = [str(n) for n in names[2:]]
+            param_values = [v for v in values[2:]]
+            return [
+                {"index": i, "name": param_names[i], "value": round(float(param_values[i]), 4) if i < len(param_values) else None}
+                for i in range(len(param_names))
+            ]
+        return names
+
 
 def main():
     q = AbletonQuery()
