@@ -116,6 +116,75 @@ def cmd_device_param(args):
     osc.set_device_param(int(track), int(device), int(param), float(value))
 
 
+# ── Track/Clip creation ────────────────────────────────────
+
+def cmd_create_midi_track(args):
+    index = int(args[0]) if args else -1
+    osc.create_midi_track(index)
+
+
+def cmd_create_audio_track(args):
+    index = int(args[0]) if args else -1
+    osc.create_audio_track(index)
+
+
+def cmd_delete_track(args):
+    track = _require_arg(args, 0, "delete-track <track>")
+    osc.delete_track(int(track))
+
+
+def cmd_set_track_name(args):
+    track = _require_arg(args, 0, "set-track-name <track> <name>")
+    name = _require_arg(args, 1, "set-track-name <track> <name>")
+    osc.set_track_name(int(track), name)
+
+
+def cmd_create_clip(args):
+    track = _require_arg(args, 0, "create-clip <track> <slot> [length_beats]")
+    slot = _require_arg(args, 1, "create-clip <track> <slot> [length_beats]")
+    length = float(args[2]) if len(args) > 2 else 4.0
+    osc.create_clip(int(track), int(slot), length)
+
+
+def cmd_delete_clip(args):
+    track = _require_arg(args, 0, "delete-clip <track> <slot>")
+    slot = _require_arg(args, 1, "delete-clip <track> <slot>")
+    osc.delete_clip(int(track), int(slot))
+
+
+def cmd_set_clip_name(args):
+    track = _require_arg(args, 0, "set-clip-name <track> <slot> <name>")
+    slot = _require_arg(args, 1, "set-clip-name <track> <slot> <name>")
+    name = _require_arg(args, 2, "set-clip-name <track> <slot> <name>")
+    osc.set_clip_name(int(track), int(slot), name)
+
+
+def cmd_add_notes(args):
+    """Add MIDI notes: add-notes <track> <slot> <pitch:start:dur:vel> ..."""
+    track = _require_arg(args, 0, "add-notes <track> <slot> <pitch:start:dur:vel> ...")
+    slot = _require_arg(args, 1, "add-notes <track> <slot> <pitch:start:dur:vel> ...")
+    if len(args) < 3:
+        _die("add-notes <track> <slot> <pitch:start:dur:vel> ...")
+    notes = []
+    for note_str in args[2:]:
+        parts = note_str.split(":")
+        if len(parts) < 3:
+            print(f"Error: note format is pitch:start:duration[:velocity] — got '{note_str}'", file=sys.stderr)
+            sys.exit(1)
+        pitch = int(parts[0])
+        start = float(parts[1])
+        dur = float(parts[2])
+        vel = int(parts[3]) if len(parts) > 3 else 100
+        notes.append((pitch, start, dur, vel, 0))
+    osc.add_notes(int(track), int(slot), notes)
+
+
+def cmd_clear_notes(args):
+    track = _require_arg(args, 0, "clear-notes <track> <slot>")
+    slot = _require_arg(args, 1, "clear-notes <track> <slot>")
+    osc.remove_notes(int(track), int(slot))
+
+
 def cmd_osc_send(args):
     if len(args) < 1:
         _die("osc <address> [args...]")
@@ -149,8 +218,12 @@ def cmd_query(args):
     elif subcmd == "devices":
         idx = int(args[1]) if len(args) > 1 else 0
         result = q.get_devices(idx)
+    elif subcmd == "params":
+        track_idx = int(args[1]) if len(args) > 1 else 0
+        device_idx = int(args[2]) if len(args) > 2 else 0
+        result = q.get_device_params(track_idx, device_idx)
     else:
-        _die("query [session|tracks|track <n>|clips <n>|devices <n>]")
+        _die("query [session|tracks|track <n>|clips <n>|devices <n>|params <t> [d]]")
 
     print(json.dumps(result, indent=2, default=str))
     q.shutdown()
@@ -195,6 +268,25 @@ def cmd_listen(args):
     path = capture.capture_bars(bars)
     if path.is_file():
         cmd_analyze([str(path)])
+
+
+# ── Templates ─────────────────────────────────────────────
+
+def cmd_template(args):
+    from . import templates
+    name = args[0] if args else ""
+
+    if name == "band":
+        bpm = float(args[1]) if len(args) > 1 else 120.0
+        templates.setup_band(bpm=bpm, delete_existing=True)
+    elif name == "list":
+        print("Available templates:")
+        print("  band [bpm]    8-track band (Drums, Bass, Keys, Lead, Pad, Guitar, Perc, Vox)")
+    else:
+        print("Usage: ableton-cli template <band|list> [options]", file=sys.stderr)
+        print("  band [bpm]    Create 8-track band template (default: 120 BPM)", file=sys.stderr)
+        print("  list          List available templates", file=sys.stderr)
+        sys.exit(1)
 
 
 # ── MIDI ──────────────────────────────────────────────────
@@ -269,13 +361,25 @@ COMMANDS = {
     "tempo": cmd_tempo,
     "start": cmd_start,
     "stop": cmd_stop,
-    # OSC
+    # OSC — transport
     "play": cmd_play,
     "pause": cmd_pause,
     "set-tempo": cmd_set_tempo,
+    # OSC — tracks
+    "create-midi-track": cmd_create_midi_track,
+    "create-audio-track": cmd_create_audio_track,
+    "delete-track": cmd_delete_track,
+    "set-track-name": cmd_set_track_name,
+    # OSC — clips
     "fire": cmd_fire,
     "stop-clip": cmd_stop_clip,
     "fire-scene": cmd_fire_scene,
+    "create-clip": cmd_create_clip,
+    "delete-clip": cmd_delete_clip,
+    "set-clip-name": cmd_set_clip_name,
+    "add-notes": cmd_add_notes,
+    "clear-notes": cmd_clear_notes,
+    # OSC — mixer
     "mute": cmd_mute,
     "unmute": cmd_unmute,
     "solo": cmd_solo,
@@ -295,6 +399,8 @@ COMMANDS = {
     "analyze": cmd_analyze,
     # Combined
     "listen": cmd_listen,
+    # Templates
+    "template": cmd_template,
     # MIDI
     "midi": cmd_midi,
 }
@@ -308,13 +414,28 @@ LINK (Carabiner):
   start                     Start transport (Link sync)
   stop                      Stop transport
 
-OSC (AbletonOSC):
+TRANSPORT:
   play                      Start Ableton playback
   pause                     Stop Ableton playback
   set-tempo <bpm>           Set Ableton tempo via OSC
+
+TRACKS:
+  create-midi-track [index] Create MIDI track (-1 or omit = append)
+  create-audio-track [idx]  Create audio track
+  delete-track <track>      Delete a track
+  set-track-name <t> <name> Rename a track
+
+CLIPS:
   fire <track> <clip>       Fire clip at track/clip index
   stop-clip <track> <clip>  Stop clip
   fire-scene <scene>        Fire entire scene
+  create-clip <t> <s> [len] Create empty MIDI clip (len in beats, default 4)
+  delete-clip <t> <s>       Delete clip
+  set-clip-name <t> <s> <n> Rename clip
+  add-notes <t> <s> P:S:D[:V] ...  Add MIDI notes (pitch:start:dur[:vel])
+  clear-notes <t> <s>       Remove all notes from clip
+
+MIXER:
   mute <track>              Mute track
   unmute <track>            Unmute track
   solo <track>              Solo track
@@ -338,6 +459,10 @@ ANALYSIS:
 
 COMBINED:
   listen [bars]             Capture + analyze (default: 4 bars)
+
+TEMPLATES:
+  template band [bpm]       Create 8-track band setup with starter patterns
+  template list             List available templates
 
 MIDI:
   midi list                 List MIDI devices
