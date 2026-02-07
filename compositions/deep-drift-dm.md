@@ -54,17 +54,17 @@ Key note references (MIDI):
 | Perc | 0.30 | R25 | Ghost-quiet, right side |
 | Vox/FX | 0.35 | R10 | Subtle atmosphere |
 
-## Energy Arc (verified via analysis)
-| Scene | Energy | Brightness | HPSS (harm/perc) |
-|-------|--------|------------|------------------|
-| 0 Void | 0.012 | 1329 | 0.94 / 0.06 |
-| 1 Surface | 0.017 | 1426 | 0.69 / 0.31 |
-| 2 Drift | 0.024 | 1786 | 0.66 / 0.34 |
-| 3 Current | 0.031 | 1608 | 0.42 / 0.58 |
-| 4 Depth | 0.037 | 1967 | 0.34 / 0.66 |
-| 5 Undertow | ~0.015 | ~1200 | ~0.75 / 0.25 |
-| 6 Resurface | ~0.028 | ~1700 | ~0.55 / 0.45 |
-| 7 Dissolve | 0.015 | 1174 | 0.73 / 0.27 |
+## Energy Arc (verified via `listen -q 8`)
+| Scene | Energy | Brightness | HPSS | Qualitative |
+|-------|--------|------------|------|-------------|
+| 0 Void | 0.012 | 1329 | 0.94 / 0.06 | very quiet, dark, purely melodic — somber |
+| 1 Surface | 0.017 | 1426 | 0.69 / 0.31 | very quiet, dark, melodic — somber |
+| 2 Drift | 0.024 | 1786 | 0.66 / 0.34 | quiet, warm, melody-dominant |
+| 3 Current | 0.031 | 1608 | 0.42 / 0.58 | quiet, warm, rhythm-dominant |
+| 4 Depth | 0.037 | 1967 | 0.34 / 0.66 | quiet, warm, percussion-heavy |
+| 5 Undertow | ~0.015 | ~1200 | ~0.75 / 0.25 | very quiet, dark, melodic — somber |
+| 6 Resurface | ~0.028 | ~1700 | ~0.55 / 0.45 | quiet, warm, balanced |
+| 7 Dissolve | 0.015 | 1174 | 0.73 / 0.27 | very quiet, dark, melodic — somber |
 
 ## Current State
 - All 8 scenes composed and programmed
@@ -73,6 +73,9 @@ Key note references (MIDI):
 - Energy arc verified: smooth build 0.012 → 0.037 then dissolve back to 0.015
 - Brightness peaks at Scene 4 (1967) and is darkest at Scene 7 (1174)
 - Harmonic/percussive balance shifts: pure harmonic pad → rhythmic peak → harmonic fade
+- Qualitative arc: somber/dark → warm/balanced → somber/dark (matches ambient intent)
+- Mood tendency stays in somber/melancholic territory throughout — correct for the concept
+- Texture shifts from purely melodic (pad only) through rhythm-dominant (drums enter) and back
 
 ## Session Log
 - Created composition plan: ambient piece in Dm at 90 BPM, 64 bars total (8 scenes x 8 bars)
