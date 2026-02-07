@@ -29,12 +29,27 @@ The first composition made with ableton-cli. A 32-bar piece in A minor exploring
 | 6 | Climax (C) | 4 | C | Crash + toms, max velocity, densest arrangement |
 | 7 | Resolution (G) | 4 | G | Pull back to quarter hats, fade dynamics, final whisper |
 
+## Qualitative Arc (expected from `listen -q 4` per scene)
+| Scene | Expected Character | Mood Tendency |
+|-------|-------------------|---------------|
+| 0 Intro (Am) | quiet, warm, melodic, sparse | melancholic |
+| 1 Opening (F) | moderate, warm, balanced, relaxed | neutral |
+| 2 Build (C) | moderate, balanced, balanced, moderate | neutral / uplifting |
+| 3 Tension (G) | loud, balanced, rhythm-dominant, busy | driving |
+| 4 Energy (Am) | loud, bright, rhythm-dominant, busy | energetic, driving |
+| 5 Peak (F) | very loud, bright, percussion-heavy, frantic | energetic |
+| 6 Climax (C) | intense, bright, percussion-heavy, frantic | energetic |
+| 7 Resolution (G) | quiet, warm, melodic, sparse | melancholic |
+
+The energy trajectory across the full arrangement should read: building (scenes 0-3) → sustaining (4-6) → decaying (7). Re-verify with `listen -q 4` after any changes.
+
 ## Current State
 - All 8 sections composed and arranged via `scripts/arrange_sections.py`
 - Perc one-shots and vocal FX added via `scripts/add_fx.py`
 - Energy arc works: sparse intro → climax → resolution
 - Lead counter-melody is intentionally sparse to leave space for guitar
 - Device parameter control verified on Creeper Lead (filter sweeps work)
+- Qualitative arc not yet verified with `-q` flag — run `listen -q 4` per scene to confirm
 
 ## Session Log
 - Composed initial 32-bar arrangement across 6 tracks

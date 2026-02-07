@@ -7,7 +7,7 @@ You are controlling Ableton Live through a CLI. You can write MIDI notes, fire c
 **Always listen after you change something.** The feedback loop is:
 
 1. Make a musical change (write notes, fire clips, tweak params)
-2. `listen -s -t -e 4` — capture 4 bars with full analysis
+2. `listen -s -q 4` — capture 4 bars with full analysis
 3. Read the spectrogram PNGs to *see* the sound
 4. Interpret the JSON — energy, chords, brightness, onsets
 5. Decide what to change next
@@ -39,7 +39,7 @@ device-param <t> <d> <p> <v>      # Set device parameter
 query params <t> [d]              # Discover device parameter names
 query session                      # Get tempo, track count, time sig
 query tracks                       # List all tracks
-listen [-s] [-t] [-e] [bars]      # Capture + analyze (default 4 bars)
+listen [-s] [-t] [-e] [-q] [bars] # Capture + analyze (default 4 bars)
 template band [bpm]               # Create 8-track band scaffold
 probe <track> [bars]              # Map sounds across octaves
 sweep <t> <d> <p> [start end steps] # Parameter sweep with capture
@@ -162,7 +162,8 @@ listen 4              # Basic: tempo, key, energy, brightness, MFCCs
 listen -s 4           # + spectrogram PNGs (mel + chroma)
 listen -t 4           # + per-beat energy/brightness/chroma arrays
 listen -e 4           # + onsets, HPSS, spectral contrast, tonnetz, chords
-listen -s -t -e 4     # Everything
+listen -q 4           # + qualitative descriptors (implies -t -e)
+listen -s -q 4        # Everything: spectrograms + qualitative + all raw data
 ```
 
 ### Reading the JSON
@@ -213,6 +214,33 @@ With `-t`, you get arrays indexed by beat:
 - `chroma_per_beat[][]`: 12-bin pitch class at each beat — the raw harmonic content
 
 Use these to spot: unintentional volume drops, filter sweeps not working, timing issues.
+
+### Qualitative Descriptors (`-q`)
+
+The `-q` flag adds a `"qualitative"` object with human-readable labels derived from raw data. These describe what the music *sounds like* — not whether it's good. Automatically enables `-t` and `-e`.
+
+| Descriptor | Values | Derived From |
+|------------|--------|-------------|
+| `energy_level` | silent → very quiet → quiet → moderate → loud → very loud → intense | RMS mean |
+| `dynamic_range` | compressed → subtle dynamics → moderate → wide → extreme | RMS coefficient of variation |
+| `brightness` | very dark → dark → warm → balanced → bright → harsh | Spectral centroid |
+| `rhythmic_density` | very sparse → sparse → relaxed → moderate → busy → frantic | Onset density/sec |
+| `texture` | purely percussive → percussion-heavy → rhythm-dominant → balanced → melody-dominant → melodic → purely melodic | HPSS ratio |
+| `harmonic_complexity` | no pitched content / static harmony / simple → moderate → complex progression | Unique chords per capture |
+| `harmonic_colour` | minor-leaning / major-leaning / mixed | Chord quality distribution |
+| `energy_stability` | steady → gently shifting → dynamic → volatile → erratic | Per-beat energy CV |
+| `energy_trajectory` | building / sustaining / decaying | First-half vs second-half energy |
+| `timbral_movement` | static timbre → subtle shifts → evolving → dramatically shifting | Per-beat brightness CV |
+| `spectral_character` | flat/washy → soft → defined → crisp → sharp/peaky | Spectral contrast mean |
+| `mood_tendency` | Array of mood words (e.g. `["somber", "melancholic"]`) | Composite: energy + brightness + harmony |
+| `summary` | One-line characterisation (e.g. `"quiet, warm, melodic, relaxed, simple progression"`) | Combination of above |
+
+**How to use qualitative output:**
+- Use `summary` for quick orientation — what does this passage sound like?
+- Use `mood_tendency` as a starting point, not a verdict. Music can hold contradictory moods.
+- `energy_trajectory` tells you whether the captured section is building, sustaining, or fading — useful for checking arrangement dynamics.
+- Compare `texture` across a `mix-check` to find which tracks are melodic vs percussive.
+- `harmonic_complexity` of "static harmony" is fine for a drone section but a red flag for a chorus.
 
 ## Procedures: Automated Workflows
 
