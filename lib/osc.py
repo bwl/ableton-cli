@@ -28,7 +28,66 @@ def set_tempo(bpm: float):
     _client().send_message("/live/song/set/tempo", [float(bpm)])
 
 
+# ── Track Management ──────────────────────────────────────
+
+def create_midi_track(index: int = -1):
+    """Create a MIDI track at index (-1 = append at end)."""
+    _client().send_message("/live/song/create_midi_track", [int(index)])
+
+
+def create_audio_track(index: int = -1):
+    """Create an audio track at index (-1 = append at end)."""
+    _client().send_message("/live/song/create_audio_track", [int(index)])
+
+
+def delete_track(track: int):
+    _client().send_message("/live/song/delete_track", [int(track)])
+
+
+def duplicate_track(track: int):
+    _client().send_message("/live/song/duplicate_track", [int(track)])
+
+
+def set_track_name(track: int, name: str):
+    _client().send_message("/live/track/set/name", [int(track), name])
+
+
 # ── Clips & Scenes ────────────────────────────────────────
+
+def create_clip(track: int, slot: int, length_beats: float = 4.0):
+    """Create an empty MIDI clip in a clip slot."""
+    _client().send_message("/live/clip_slot/create_clip", [int(track), int(slot), float(length_beats)])
+
+
+def delete_clip(track: int, slot: int):
+    _client().send_message("/live/clip_slot/delete_clip", [int(track), int(slot)])
+
+
+def set_clip_name(track: int, slot: int, name: str):
+    _client().send_message("/live/clip/set/name", [int(track), int(slot), name])
+
+
+def add_notes(track: int, slot: int, notes: list[tuple[int, float, float, int, int]]):
+    """Add MIDI notes to a clip.
+
+    Each note is (pitch, start_beat, duration_beats, velocity, mute).
+    mute: 0 = normal, 1 = muted.
+    """
+    flat = [int(track), int(slot)]
+    for pitch, start, dur, vel, muted in notes:
+        flat.extend([int(pitch), float(start), float(dur), int(vel), int(muted)])
+    _client().send_message("/live/clip/add/notes", flat)
+
+
+def remove_notes(track: int, slot: int):
+    """Remove all notes from a clip."""
+    _client().send_message("/live/clip/remove/notes", [int(track), int(slot)])
+
+
+def get_notes(track: int, slot: int):
+    """Request notes from a clip (response comes on /live/clip/get/notes)."""
+    _client().send_message("/live/clip/get/notes", [int(track), int(slot)])
+
 
 def fire_clip(track: int, clip: int):
     _client().send_message("/live/clip/fire", [int(track), int(clip)])
